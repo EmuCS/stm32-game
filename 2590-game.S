@@ -111,10 +111,31 @@ Main:
   @ Idle loop forever (welcome to interrupts!!)
 @ Idle_Loop:
 @   B     Idle_Loop
+
+
   @@ -------- GAME Implementation -------- @@
 
 @@@ main game 
 MainGame:
+
+  LDR     R4, =GPIOE_MODER
+  LDR     R5, [R4]
+  MOV     R1, #8
+
+.LinitiateLEDs:
+  MOV     R2, #0b11
+  LSL     R3, R1, #1
+  LSL     R2, R2, R3
+  BIC     R5, R5, R2
+  
+  MOV     R2, #0b01
+  LSL     R2, R2, R3
+  ORR     R2, R2, R3
+
+  ADD     R1, R1, #1
+  CMP     R1, #16
+  BNE     .LinitiateLEDs
+
 
   BL    Menu                      @ level = int_Menu()
   
@@ -124,6 +145,11 @@ MainGame:
 
   BL    MainGame                  @ MainGame()
 
+
+
+
+  @@ -------- SUBROUTINE Implementation -------- @@
+
   Menu:
   PUSH {R4-R12, LR}
   @ allLightsAtOnce()
@@ -131,7 +157,25 @@ MainGame:
   MOV     R12, #0                 @ int level = 0;
   MOV     R11, #0                 @ boolean buttonPressed = false
                                   
-.Lwhile:                          @ while(level == 0) 
+.Lwhile:                          
+
+
+@ while(level == 0)
+@ {
+@   int LEDPin = 8
+@   while(LEDPin < 16)
+@   {
+@     LED.LEDPin = on
+@     wait(2)
+@     if(buttonPresssed())
+@     {
+@       level = LEDPIN - 7        
+@     }
+
+@     LED.LEDPin = off 
+@     LEDPin ++
+@   }  
+@ }
                                   @ {
   LDR     R6, =1500000                  @   wait(2)
 .LwhileWaitL3:
