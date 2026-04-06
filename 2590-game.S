@@ -551,9 +551,9 @@ ShowPattern:
 Game:
   PUSH {R4-R12, LR}
 
-LDR   R6, =button_flag
-MOV   R5, #0
-STR   R5, [R6]
+  LDR   R6, =button_flag
+  MOV   R5, #0
+  STR   R5, [R6]
   
 .LWhileGame:                    @ while(pattern[index] != 0x00 || !gameOver )
   MOV   R11, #8                 @   int i = 8
