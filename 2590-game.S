@@ -586,7 +586,7 @@ Game:
 
   @ if button pressed
   MOV   R8, #0
-  STR   R8, [R7]                @ reset button press flag
+  STR   R8, [R7]                
 
   @ compare target pin to currently lit LED pin
   CMP   R6, R11
