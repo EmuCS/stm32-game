@@ -550,24 +550,27 @@ ShowPattern:
 
 Game:
   PUSH {R4-R12, LR}
-
-  @ resets the button flag
-  LDR   R6, =button_flag
-  MOV   R5, #0
-  STR   R5, [R6]
   
+  MOV   R12, R0                 
+
 .LWhileGame:                    @ while(pattern[index] != 0x00 || !gameOver )
   MOV   R11, #8                 @   int i = 8
 
 .LWhileLEDs:                    @   while (i < 16)
+
   CMP   R11, #16
   BGE   .LWhileGame
 
+@ if ( targetLED == 0x00) break;
+  LDR   R6, [R0]                @ load next target LED
+  CMP   R6, #0
+  BEQ   .LGameOver              @ if 0x00, pattern complete
+
   MOV   R10, #0b1             @     mask = #0b1
+  LSL   R10, R10, R11
   LDR   R4, =GPIOE_ODR           
   LDR   R5, [R4]
-  LSL   R10, R10, R11
-  ORR   R5, R10
+  ORR   R5, R5, R10
   STR   R5, [R4]                @     LED[i] = on
 
   LDR   R9, =1000000            @     timer = 1000000
@@ -579,47 +582,58 @@ Game:
   LDR   R7, =button_flag
   LDR   R8, [R7]
   CMP   R8, #0
-  BNE   .LHandlePress
+  BEQ   .LNoPress
 
+  @ if button pressed
+  MOV   R8, #0
+  STR   R8, [R7]                @ reset button press flag
+
+  @ compare target pin to currently lit LED pin
+  CMP   R6, R11
+  BEQ   .LCorrectButtonPress    @ correct press
+  BL    gameOver
+  B     .LGameOver              @ wrong press
+
+.LNoPress
   CMP   R9, #0
   BGT   .LWhileGameTimer  
 
 
-@ if no button pressed then continue iterating
-.LContinue:
-  BIC   R5, R10
+@ if no button pressed, turn off current LED and move on to next
+  BIC   R5, R5, R10
   STR   R5, [R4]
   ADD   R11, R11, #1
   B     .LWhileLEDs
 
-@ if button pressed
-.LHandlePress:
-  MOV   R8, #0
-  STR   R8, [R7]          @ reset button press flag
 
-  LDR   R6, [R0]          @ expected pattern value
-  CMP   R6, R11
-  BEQ   .LPatternMatch    @ correct press
-  BL    gameOver
-  B     .LGameOver        @ wrong press
+.LCorrectButtonPress:                 @     else
+                                 @     {
+  ADD   R0, R0, #4               @       index += 4
 
-.LPatternMatch:                 @     else
-                                @     {
-  ADD   R0, R0, #4              @       index += 4
-  BIC   R5, R10                 @        
-  STR   R5, [R4]                @       LED[i] = off
-  LDR   R8, =0x8800             
-  STR   R8, [R4]                @       blinkGreenLeds()
-                                @     }
+  BIC   R5, R5, R10              @        
+  STR   R5, [R4]                 @       LED[i] = off
+
+@ blink LEDs green
+  LDR   R8, =0x8800 
+  LDR   R6, [R4]
+  ORR   R6, R6, R8            
+  STR   R8, [R4]                 @       blinkGreenLeds()
+                                 @     }
   LDR   R9, =500000              @ delay
 
 @ makes the green LED blink once indicate a correct press 
-.BlinkDelay:
+.LGreenBlinkDelay:
   SUBS  R9, R9, #1
-  BNE  .BlinkDelay
+  BNE  .LGreenBlinkDelay
 
-  STR   R5, [R4]          @ turn off green LEDs
-  ADD   R11, R11, #1      @ i++;
+   BIC  R6, R6, R8        @ Turn off green LEDs
+   STR  R6, [R4]
+
+  @ resets the button flag
+  LDR   R6, =button_flag
+  MOV   R5, #0
+  STR   R5, [R6]
+
   B     .LWhileLEDs
 
 .LGameOver:
@@ -667,6 +681,10 @@ gameOver:
 
     SUBS  R6, R6, #1             @ numberOfBlinks -= 1;
     BNE   .LBlinkLoop            @ repeat if not zero
+
+  @ turn off all LEDs at the end
+  MOV  R5, #0
+  STR  R5, [R4]
 
   POP {R4-R12, LR}
 
