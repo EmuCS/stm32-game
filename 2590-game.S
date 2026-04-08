@@ -125,14 +125,27 @@ MainGame:
   STR     R5, [R4]
 
 
-  @ BL    Menu                      @ level = int_Menu()
-  
+  BL    Menu                      @ level = int_Menu()
+
+  LDR   R9, =1000000              @     timer = 1000000
+.LWhileSwapTimer1:                @     while(timer != = )
+  SUB   R9, R9, #1                @       timer--
+  CMP   R9, #0
+  BGT   .LWhileSwapTimer1
+
   LDR   R0, =0x20004000   
-
   BL    PatternsToMemory          @ PatternsToMemory(level)
-  
-  BL    ShowPattern               @ ShowPattern(level)
 
+  LDR   R0, =0x20004000 
+  BL    ShowPattern               @ ShowPattern(level)
+  
+  LDR   R9, =500000               @     timer = 1000000
+.LWhileSwapTimer2:                @     while(timer != = )
+  SUB   R9, R9, #1                @       timer--
+  CMP   R9, #0
+  BGT   .LWhileSwapTimer2
+
+  LDR   R0, =0x20004000 
   BL    Game                      @ MainGame()
 
 
@@ -155,7 +168,7 @@ MainGame:
 @ Parameters:
 @   - None
 @ Return:
-@   R0: Level  
+@   R1: Level  
   Menu:
   PUSH {R4-R12, LR}
 
@@ -178,21 +191,34 @@ MainGame:
 
   LDR   R9, =1500000            @     timer = 1000000
 .LWhileTimer:                   @     while(timer != = )
+  @ check button during delay
+  LDR   R7, =button_flag
+  LDR   R8, [R7]
+  CMP   R8, #0
+  BEQ   .LNoMenuPress
+                                @       if button pressed
+  MOV   R8, #0
+  STR   R8, [R7]                
+  SUB   R1, R11, #7             @         level = i - 7
+  BIC   R5, R10                 @         LEDi = off
+  STR   R5, [R4]
+  B     .LendWhileLevel         @         break
+
+.LNoMenuPress:
   SUB   R9, R9, #1              @       timer--
   CMP   R9, #0
-  BGT   .LWhileTimer
-  
+  BNE   .LWhileTimer
+
   BIC   R5, R10                 @     LEDi = off
   STR   R5, [R4]
   ADD   R11, R11, #1            @     i++
   B     .LWhilei
   
-                                @ if(buttonPressed())
-  SUB   R12, R8, #7            @ return level = i - 7
+  SUB   R12, R8, #7             @ return level = i - 7
 .LendWhilei:
 .LendWhileLevel:  
 
-  POP {R4-R12, LR}
+  POP {R4-R12, PC}
 
 
 @@ -- @@
@@ -204,7 +230,7 @@ MainGame:
 @   R0: memory address to array with stored pattern  
 PatternsToMemory:
 
-  PUSH {LR, R4-R12}
+  PUSH { R4-R12, LR}
 
   MOV   R12, #0                  @ int index = 0;
   MOV   R4, R0                   @ pattern.address = 0x20000000
@@ -501,6 +527,10 @@ PatternsToMemory:
 
 .LBreakCase:
   POP {R4-R12, PC}
+
+
+
+
 @@ -- @@
 @ Show Pattern
 @   Itterates through pattern array to show the player what sequence they have to remember
@@ -510,7 +540,8 @@ PatternsToMemory:
 @   - None - 
 ShowPattern:
   PUSH {R4-R12, LR}
-
+  
+  MOV   R11, #8                 @   int i = 8
 .LWhilePattern:                @ while(pattern != 0x00)
   LDR   R6, [R0], #4              
   CMP   R6, 0x00              
@@ -534,7 +565,10 @@ ShowPattern:
   ADD   R11, R11, #1            @     i++
   B     .LWhilePattern
 .LendWhilePattern:
-  POP {R4-R12, LR}
+
+  POP {R4-R12, PC}
+
+
 
 
 @@ -- @@
@@ -557,14 +591,13 @@ Game:
   MOV   R11, #8                 @   int i = 8
 
 .LWhileLEDs:                    @   while (i < 16)
-
   CMP   R11, #16
   BGE   .LWhileGame
 
 @ if ( targetLED == 0x00) break;
   LDR   R6, [R0]                @ load next target LED
-  CMP   R6, #0
-  BEQ   .LGameOver              @ if 0x00, pattern complete
+  CMP   R6, #0x00
+  BEQ   .LVictory               @ if 0x00, pattern complete
 
   MOV   R10, #0b1             @     mask = #0b1
   LSL   R10, R10, R11
@@ -574,9 +607,9 @@ Game:
   STR   R5, [R4]                @     LED[i] = on
 
   LDR   R9, =1000000            @     timer = 1000000
-
 .LWhileGameTimer:               @     while(timer != = )
   SUB   R9, R9, #1              @       timer--
+  CMP   R9, #0
 
   @ check button during delay
   LDR   R7, =button_flag
@@ -594,7 +627,7 @@ Game:
   BL    gameOver
   B     .LGameOver              @ wrong press
 
-.LNoPress
+.LNoPress:
   CMP   R9, #0
   BGT   .LWhileGameTimer  
 
@@ -606,28 +639,28 @@ Game:
   B     .LWhileLEDs
 
 
-.LCorrectButtonPress:                 @     else
-                                 @     {
-  ADD   R0, R0, #4               @       index += 4
+.LCorrectButtonPress:             @     else
+                                  @     {
+  ADD   R0, R0, #4                @       index += 4
 
-  BIC   R5, R5, R10              @        
-  STR   R5, [R4]                 @       LED[i] = off
+  BIC   R5, R5, R10               @        
+  STR   R5, [R4]                  @       LED[i] = off
 
 @ blink LEDs green
   LDR   R8, =0x8800 
   LDR   R6, [R4]
   ORR   R6, R6, R8            
-  STR   R8, [R4]                 @       blinkGreenLeds()
-                                 @     }
-  LDR   R9, =500000              @ delay
-
+  STR   R8, [R4]                  @       blinkGreenLeds()
+                                  @     }
+  LDR   R9, =500000               @ delay
 @ makes the green LED blink once indicate a correct press 
 .LGreenBlinkDelay:
   SUBS  R9, R9, #1
+  CMP   R9, #0
   BNE  .LGreenBlinkDelay
 
-   BIC  R6, R6, R8        @ Turn off green LEDs
-   STR  R6, [R4]
+  BIC  R6, R6, R8                 @ Turn off green LEDs
+  STR  R6, [R4]
 
   @ resets the button flag
   LDR   R6, =button_flag
@@ -638,7 +671,29 @@ Game:
 
 .LGameOver:
 
-  POP {R4-R12, LR}
+.LVictory:
+@ blink LEDs green
+
+  MOV   R10, #3
+.LRepeatThree:
+  LDR   R8, =0x8800 
+  LDR   R6, [R4]
+  ORR   R6, R6, R8            
+  STR   R8, [R4]                  @       blinkGreenLeds()
+                                  @     }
+  LDR   R9, =500000               @ delay
+@ makes the green LED blink once indicate a correct press 
+.LVictoryBlinkDelay:
+  SUBS  R9, R9, #1
+  CMP   R9, #0
+  BNE   .LVictoryBlinkDelay
+
+  SUB   R10, R10, #1
+  CMP   R10, #0
+  BNE   .LRepeatThree
+  BL    gameOver
+
+  POP {R4-R12, PC}
 
 
 
