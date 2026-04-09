@@ -189,7 +189,7 @@ MainGame:
   ORR   R5, R10
   STR   R5, [R4] 
 
-  LDR   R9, =1500000            @     timer = 1000000
+  LDR   R9, =900000            @     timer = 900000
 .LWhileTimer:                   @     while(timer != = )
   @ check button during delay
   LDR   R7, =button_flag
@@ -199,7 +199,7 @@ MainGame:
                                 @       if button pressed
   MOV   R8, #0
   STR   R8, [R7]                
-  SUB   R1, R11, #7             @         level = i - 7
+  SUB   R12, R11, #7             @         level = i - 7
   BIC   R5, R10                 @         LEDi = off
   STR   R5, [R4]
   B     .LendWhileLevel         @         break
@@ -214,9 +214,10 @@ MainGame:
   ADD   R11, R11, #1            @     i++
   B     .LWhilei
   
-  SUB   R12, R8, #7             @ return level = i - 7
+
 .LendWhilei:
 .LendWhileLevel:  
+  MOV   R1, R12                 @ return level = i - 7
 
   POP {R4-R12, PC}
 
@@ -284,7 +285,7 @@ PatternsToMemory:
 
 .LCase3:  @ else if(level == 3)
   @   // Pattern for Level 3
-  CMP   R5, #2                   @ if(level == 3)
+  CMP   R5, #3                   @ if(level == 3)
   BNE   .LCase4
 
   MOV   R6, #14  
@@ -315,7 +316,7 @@ PatternsToMemory:
 .LCase4:  @ else if(level == 4)
   @   // Pattern for Level 4
 
-  CMP   R5, #2                   @ if(level == 4)
+  CMP   R5, #4                   @ if(level == 4)
   BNE   .LCase5
 
   MOV   R6, #11
@@ -352,7 +353,7 @@ PatternsToMemory:
 .LCase5:  @ else if(level == 5)
   @   // Pattern for Level 4
 
-  CMP   R5, #2                   @ if(level == 5)
+  CMP   R5, #5                   @ if(level == 5)
   BNE   .LCase6
 
   MOV   R6, #10
@@ -392,7 +393,7 @@ PatternsToMemory:
 .LCase6:  @ else if(level == 6)
   @   // Pattern for Level 4
 
-  CMP   R5, #2                   @ if(level == 6)
+  CMP   R5, #6                   @ if(level == 6)
   BNE   .LCase7
 
   MOV   R6, #14  
@@ -435,7 +436,7 @@ PatternsToMemory:
 .LCase7:  @ else if(level == 7)
   @   // Pattern for Level 4
 
-  CMP   R5, #2                   @ if(level == 7)
+  CMP   R5, #7                   @ if(level == 7)
   BNE   .LCase8
 
   MOV   R6, #10
@@ -606,7 +607,7 @@ Game:
   ORR   R5, R5, R10
   STR   R5, [R4]                @     LED[i] = on
 
-  LDR   R9, =1000000            @     timer = 1000000
+  LDR   R9, =900000            @     timer = 1000000
 .LWhileGameTimer:               @     while(timer != = )
   SUB   R9, R9, #1              @       timer--
   CMP   R9, #0
